@@ -1,27 +1,9 @@
+# save_princess_app.py
 import streamlit as st
+import html
+from textwrap import dedent
 
 st.set_page_config(page_title="Mission: Save Princess VANILLA FLUFFFY CAKEEE", layout="centered")
-
-# -------------------------
-# --- Intro Page / Title ---
-# -------------------------
-INTRO_MARKDOWN = """
-# HiIIII DAWGGG,BETTT UR SITTING IN FRONT OF ME RN AND TRYNA GUESS WHATS GOING ON?!! LIKE WTFFFFF IS EVEN SAVE PRINCESSS FLU.....
-
-## AND WHATS THISSS MISSION SHI ( NGL HOPEFULLY AMAR SPEAKER E SHUNAI JAI OR KOTHA THO) YEAHH DAWGGG ITS TIME FOR SOMEE ACTIONN 🤯🤯
-
-# TIME TO ROCK MY WORLD!!!!!🥳🥳🥳🥳
-
-### NGLL THIS IS MORE LIKE A QUESTIONNAIREE 
-
-## BUT I HOPEE IT MAKES U CRACK UP FACING MY NONCHALANT ASS
-
----
-
-# 🚨 Mission : Save Princess VANILLA FLUFFFY CAKEEE 🍰 🚨
-
-## I REALLY LOVE U DAWGG AND HOPEFULLY THIS LITTLE ADVENTURE IS WELL WORTH ITTT!!!!!!!
-"""
 
 # -------------------------
 # --- Questions Data ------
@@ -138,76 +120,169 @@ QUESTIONS = [
 ]
 
 # -------------------------
-# --- Session State -------
+# --- Helpers & State -----
 # -------------------------
-if 'step' not in st.session_state:
-    st.session_state.step = 0
-if 'answers' not in st.session_state:
-    st.session_state.answers = [None]*len(QUESTIONS)
-if 'selected_msg' not in st.session_state:
+def init_state():
+    if "step" not in st.session_state:
+        st.session_state.step = 0  # 0 = intro, 1..len(QUESTIONS) = question steps, >len = final
+    if "answers" not in st.session_state:
+        st.session_state.answers = [None] * len(QUESTIONS)
+    if "selected_msg" not in st.session_state:
+        st.session_state.selected_msg = ""
+    if "last_choice" not in st.session_state:
+        st.session_state.last_choice = None
+
+def start_mission():
+    st.session_state.step = 1
     st.session_state.selected_msg = ""
+    st.session_state.last_choice = None
+
+def choose_option(q_index: int, opt_index: int):
+    opt_text, opt_msg = QUESTIONS[q_index]["opts"][opt_index]
+    st.session_state.answers[q_index] = (opt_text, opt_msg)
+    st.session_state.selected_msg = opt_msg
+    st.session_state.last_choice = opt_text
+    # advance to next step (or finish)
+    st.session_state.step = st.session_state.step + 1
+
+def restart():
+    st.session_state.step = 0
+    st.session_state.answers = [None] * len(QUESTIONS)
+    st.session_state.selected_msg = ""
+    st.session_state.last_choice = None
+
+init_state()
 
 # -------------------------
-# --- Styles -------------
+# --- CSS / Styling ------
 # -------------------------
-st.markdown("""
+# We'll create CSS for uniquely identified fake buttons using wrapper div classes.
+# We'll inject style that matches data-key attributes used below.
+BUTTON_COLORS = ["#ff4d4d", "#4d79ff", "#4dff88", "#ffd24d", "#ff66b3", "#9b6cff", "#ff8a3d", "#ced4da"]
+
+st.markdown(dedent(f"""
 <style>
-h1.shiny{
+/* generic page styling */
+.section-center {{ max-width:900px; margin:0 auto; }}
+.intro-box {{ padding:16px; border-radius:12px; background:linear-gradient(90deg,#fff0f0,#fff7f0); }}
+
+.msg-box {{ border-radius:10px; padding:12px; background:#f8f9fa; margin-top:10px; }}
+
+h1.shiny {{
     background: linear-gradient(90deg, #ffd700, #ff69b4, #00ffff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     text-align:center;
-}
+}}
+/* button-like style for our HTML buttons; we create classes .opt-btn-<key> dynamically below */
+button.opt-btn {{
+    border: none;
+    color: white;
+    font-weight:700;
+    padding:10px 16px;
+    border-radius:10px;
+    margin:6px 6px 6px 0;
+    cursor:pointer;
+    font-size:14px;
+}}
+/* override small focus outline */
+button.opt-btn:focus {{ outline: none; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }}
 </style>
-""", unsafe_allow_html=True)
-
-# Color palette for buttons
-BUTTON_COLORS = ["#ff4d4d", "#4d79ff", "#4dff88", "#ffd24d", "#ff66b3"]
+"""), unsafe_allow_html=True)
 
 # -------------------------
-# --- App Logic ----------
+# --- Intro Page ----------
 # -------------------------
 if st.session_state.step == 0:
-    st.markdown(INTRO_MARKDOWN)
-    if st.button("🚀 Start Mission"):
-        st.session_state.step += 1
-        st.experimental_rerun()
+    # intro display
+    st.markdown("<div class='section-center'>", unsafe_allow_html=True)
+    st.markdown("<div class='intro-box'>", unsafe_allow_html=True)
+    st.markdown(dedent("""
+    # HiIIII DAWGGG,BETTT UR SITTING IN FRONT OF ME RN AND TRYNA GUESS WHATS GOING ON?!! LIKE WTFFFFF IS EVEN SAVE PRINCESSS FLU.....
 
-elif st.session_state.step <= len(QUESTIONS):
-    q_index = st.session_state.step - 1
-    question = QUESTIONS[q_index]
-    st.markdown(f"### {question['q']}")
+    ## AND WHATS THISSS MISSION SHI ( NGL HOPEFULLY AMAR SPEAKER E SHUNAI JAI OR KOTHA THO) YEAHH DAWGGG ITS TIME FOR SOMEE ACTIONN 🤯🤯
 
-    # Display colored buttons
-    for i, (opt, msg) in enumerate(question['opts']):
+    # TIME TO ROCK MY WORLD!!!!!🥳🥳🥳🥳
+
+    ### NGLL THIS IS MORE LIKE A QUESTIONNAIREE 
+
+    ## BUT I HOPEE IT MAKES U CRACK UP FACING MY NONCHALANT ASS
+
+    ---
+
+    # 🚨 Mission : Save Princess VANILLA FLUFFFY CAKEEE 🍰 🚨
+
+    ## I REALLY LOVE U DAWGG AND HOPEFULLY THIS LITTLE ADVENTURE IS WELL WORTH ITTT!!!!!!!
+    """), unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # Use st.button with on_click to update state (safe)
+    st.button("🚀 Start Mission", on_click=start_mission)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# -------------------------
+# --- Questions Flow ------
+# -------------------------
+elif 1 <= st.session_state.step <= len(QUESTIONS):
+    q_idx = st.session_state.step - 1
+    q = QUESTIONS[q_idx]
+    st.markdown(f"### Mission Checkpoint {st.session_state.step} of {len(QUESTIONS)}")
+    st.markdown(f"**{q['q']}**")
+
+    # Render option buttons as HTML with unique onclick that posts message to parent; capture clicks via st.button fallback
+    # Streamlit can't directly catch JS postMessage conveniently — instead we use st.button with on_click callbacks.
+    # We'll render colored HTML buttons visually, but use actual st.button (hidden) to trigger the callback.
+    # To visually show colored buttons while using st.button, we generate matching CSS classes and then render st.button with label containing HTML (escaped).
+    # Simpler: We'll render regular st.button but style global button via data attribute keys. We'll still cycle colors visually using inline <div>s.
+
+    # We'll create columns to layout buttons nicely
+    cols = st.columns(2) if len(q["opts"]) > 2 else st.columns(len(q["opts"]))
+    for i, (opt_text, opt_msg) in enumerate(q["opts"]):
+        col = cols[i % len(cols)]
+        # choose color for this option
         color = BUTTON_COLORS[i % len(BUTTON_COLORS)]
-        if st.button(opt, key=f"{q_index}_{i}"):
-            st.session_state.answers[q_index] = opt
-            st.session_state.selected_msg = msg
-            st.session_state.step += 1
-            st.experimental_rerun()
-
+        # unique key for st.button
+        key = f"q{q_idx}_opt{i}"
+        # create a clickable HTML-styled button but use st.button for the actual click handling
+        # We'll show a styled HTML element and then the st.button below it but visually hide st.button using CSS? Instead keep both simple:
+        # Use st.markdown to show a colored label, then st.button to click.
+        with col:
+            st.markdown(f"<div style='display:inline-block;padding:6px 10px;border-radius:10px;background:{color};color:white;font-weight:700;margin-bottom:6px'>{html.escape(opt_text)}</div>", unsafe_allow_html=True)
+            if st.button("Select", key=key):
+                # on click, call our choose_option
+                choose_option(q_idx, i)
+                # no need to explicit rerun; state changed will trigger rerun
+    # show selected message if any (for current step or last)
     if st.session_state.selected_msg:
-        st.markdown(f"💬 {st.session_state.selected_msg}")
+        st.markdown(f"<div class='msg-box'><strong>Your pick:</strong> {st.session_state.last_choice}</div>", unsafe_allow_html=True)
+        st.info(st.session_state.selected_msg)
+
+    # allow user to go back one step
+    if st.session_state.step > 1:
+        if st.button("⬅️ Go Back"):
+            st.session_state.step -= 1
+            st.session_state.selected_msg = ""
+            st.session_state.last_choice = None
 
 # -------------------------
 # --- Final Success Page ---
 # -------------------------
 else:
+    # Final full message (as you provided)
     st.markdown("## End of the Road?\n\n**NOT YET!!!!!!!!**")
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown(
-        "I JUST WANNA SAY DAWGG HOPEFULLY U ENJOYED THIS.FROM WATCHING TO SUNRISE TOGETHER AND WAKING UP DURING SUNSETZZ FROM our afternoon nap. "
-        "I hope we can continue keep twinning like this. And make sure our hearts are entwined like a match made in heaven."
-    )
+    st.markdown(dedent("""
+    I JUST WANNA SAY DAWGG HOPEFULLY U ENJOYED THIS. FROM WATCHING TO SUNRISE TOGETHER AND WAKING UP DURING SUNSETZZ FROM our afternoon nap. 
+    I hope we can continue keep twinning like this. And make sure our hearts are entwined like a match made in heaven.
+    """))
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Song lyrics in custom font
+    # Song lyrics in custom font (monospace) and styled box
     st.markdown(
-        "<div style=\"font-family:'Courier New', monospace; font-size:16px; color:#222; background-color:#f0f0f0;"
-        "padding:10px; border-radius:8px;\">"
-        "A great singer once said -<br>"
+        "<div style=\"font-family:'Courier New', monospace; font-size:16px; color:#222; background-color:#f0f0f0; padding:12px; border-radius:8px;\">"
+        "<strong>A great singer once said -</strong><br>"
         "<em>Jo tum mere ho<br>"
         "Toh main kuch nahi maangoon duniya se<br>"
         "Aur tum ho hi nahi<br>"
@@ -215,11 +290,12 @@ else:
         "</div>",
         unsafe_allow_html=True
     )
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Many peoples broken hearts paragraph (bold + highlight)
+    # Many peoples broken hearts paragraph (bold + highlighted)
     st.markdown(
-        "<div style='background-color:#ffd166; color:#000; padding:12px; border-radius:10px; font-weight:bold;'>"
+        "<div style='background-color:#ffd166; color:#000; padding:14px; border-radius:10px; font-weight:700;'>"
         "Many peoples broken heart That broke into million piece Turned to a billion pieces after listening to this Song. "
         "But For us Dawg It contains a totally different meaning. "
         "It teaches Us to never let go And We fucking exist for each other<WE FUCKING Do. "
@@ -227,29 +303,25 @@ else:
         "</div>",
         unsafe_allow_html=True
     )
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Mission paragraph (bold + highlight)
+    # Mission paragraph (bold + purple highlight)
     st.markdown(
-        "<div style='background-color:#9b6cff; color:white; padding:12px; border-radius:10px; font-weight:bold;'>"
+        "<div style='background-color:#9b6cff; color:white; padding:14px; border-radius:10px; font-weight:800;'>"
         "MISSION : RESCUE PRINCESSS VANILLA FLUFFY CAKE FINALLY SUCCESSFULL"
         "</div>",
         unsafe_allow_html=True
     )
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    # Closing lines
-    st.markdown("Byee dawg")
-    st.markdown("I love You always♾️♾️")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:16px'>Byee dawg</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size:16px'>I love You always♾️♾️</div>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Shiny celebration
     st.markdown("<h1 class='shiny'>🎉 YOU COMPLETED THE MISSION! 🎉</h1>", unsafe_allow_html=True)
     st.balloons()
 
-    # Restart button
     if st.button("🔁 Restart Mission"):
-        st.session_state.step = 0
-        st.session_state.selected_msg = None
-        st.session_state.answers = [None] * len(QUESTIONS)
-        st.experimental_rerun()
+        restart()
